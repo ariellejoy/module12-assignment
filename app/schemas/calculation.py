@@ -100,7 +100,7 @@ class CalculationUpdate(BaseModel):
         json_schema_extra={"example": {"inputs": [42, 7]}}
     )
 
-class CalculationResponse(CalculationBase):
+class CalculationRead(CalculationBase):
     """Schema for reading a Calculation from the database"""
     id: UUID = Field(
         ...,

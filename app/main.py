@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session # represents a connection/session used to int
 from app.auth.dependencies import get_current_active_user
 from app.models.calculation import Calculation
 from app.models.user import User
-from app.schemas.calculation import CalculationBase, CalculationResponse, CalculationUpdate
+from app.schemas.calculation import CalculationBase, CalculationRead, CalculationUpdate
 from app.schemas.token import TokenResponse
 from app.schemas.user import UserCreate, UserResponse, UserLogin
 from app.database import Base, get_db, engine
@@ -173,7 +173,7 @@ def login_form(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
 # Create (Add) Calculation – using CalculationBase so that 'user_id' from the client is ignored.
 @app.post(
     "/calculations", # defines the HTTP POST endpoint 
-    response_model=CalculationResponse, # specifies the structure of the response returned to the client
+    response_model=CalculationRead, # specifies the structure of the response returned to the client
     status_code=status.HTTP_201_CREATED, # 201 status code 
     tags=["calculations"], # groups under Calculations in API docs
 )
@@ -220,7 +220,7 @@ def create_calculation(
 
 # Browse / List Calculations (for the current user)
 # this calculation retreives all calcs belonging to the currently authenticated user
-@app.get("/calculations", response_model=List[CalculationResponse], tags=["calculations"])
+@app.get("/calculations", response_model=List[CalculationRead], tags=["calculations"])
 def list_calculations(
     current_user = Depends(get_current_active_user),
     db: Session = Depends(get_db)
@@ -234,7 +234,7 @@ def list_calculations(
     return calculations # returns list of calculations
 
 # Read / Retrieve a Specific Calculation by ID
-@app.get("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"]) # {calc_id} - path parameter
+@app.get("/calculations/{calc_id}", response_model=CalculationRead, tags=["calculations"]) # {calc_id} - path parameter
 def get_calculation(
     calc_id: str,
     current_user = Depends(get_current_active_user),
@@ -258,7 +258,7 @@ def get_calculation(
     return calculation # requested calc is returned to the client
 
 # Edit / Update a Calculation
-@app.put("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
+@app.put("/calculations/{calc_id}", response_model=CalculationRead, tags=["calculations"])
 def update_calculation(
     calc_id: str, # identifies the calc to update
     calculation_update: CalculationUpdate, # contains the updated info
@@ -279,8 +279,15 @@ def update_calculation(
 
     # updates the inputs
     if calculation_update.inputs is not None:
-        calculation.inputs = calculation_update.inputs
-        calculation.result = calculation.get_result()
+        try:
+            calculation.inputs = calculation_update.inputs
+            calculation.result = calculation.get_result()
+        except ValueError as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
     calculation.updated_at = datetime.now(timezone.utc) # updates the timestamp
     # saves/refreshes changes and returns the updated record
     db.commit()
