@@ -74,7 +74,7 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
     # input 2: FastAPI provides the database connection every time a user is registering (dependency injection)
     
     # Exclude confirm_password before passing data to User.register
-    user_data = user_create.dict(exclude={"confirm_password"}) # takes the registration info and converts it into a Python dictionary
+    user_data = user_create.model_dump(exclude={"confirm_password"}) # takes the registration info and converts it into a Python dictionary
     try: # where the actual user registration happens
         user = User.register(db, user_data) # calls the register method inside the User model and passes the db connection + registration info
         db.commit() # saves the changes to the db permanently 

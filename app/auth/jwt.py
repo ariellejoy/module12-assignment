@@ -107,8 +107,18 @@ async def decode_token(
                 detail="Invalid token type",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-            
-        if await is_blacklisted(payload["jti"]):
+        
+        # checks that the token contains a JTI claim 
+        jti = payload.get("jti")
+
+        if not jti: 
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+                    
+        if await is_blacklisted(jti):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has been revoked",
@@ -140,19 +150,29 @@ async def get_current_user(
     """
     try:
         payload = await decode_token(token, TokenType.ACCESS)
-        user_id = payload["sub"]
+        user_id = payload.get("sub")
+
+        if not user_id: 
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Invalid token payload", 
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        try: 
+            user_id= UUID(user_id)
+        except (ValueError, TypeError): 
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user identifier",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         
         user = db.query(User).filter(User.id == user_id).first()
+
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
-            )
-            
-        if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Inactive user"
             )
             
         return user
