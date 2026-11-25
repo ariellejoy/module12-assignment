@@ -15,9 +15,12 @@ from fastapi import FastAPI, Depends, HTTPException, status
 # Depends allows FastAPI to automatically provide things a function needs
 # HTTPException allows the API to return an error to the person making a request
 # status provides reasonable names for response codes
+from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordRequestForm
 # handles username/password login submitted through form
 from sqlalchemy.orm import Session # represents a connection/session used to interact with db
+
+from pathlib import Path
 
 # importing app files
 from app.auth.dependencies import get_current_active_user
@@ -46,6 +49,13 @@ app = FastAPI( # name of app
     lifespan=lifespan # tells FastAPI to use the startup/shutdown process defined above
 )
 # this is important because the API endpoints that we create later will be attached to this application using app
+
+# ------------------------------------------------------------------------------
+# Root Endpoint
+# ------------------------------------------------------------------------------
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Calculations API!"}
 
 # ------------------------------------------------------------------------------
 # Health Endpoint
@@ -326,7 +336,7 @@ def delete_calculation(
 
 if __name__ == "__main__": # ensures the server starts only when this file is directly expcuted
     import uvicorn # imports the ASGI server used to run FastAPI
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8001, log_level="info")
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, log_level="info")
     # app.main: app - ids the app instance, app.main refers to the module and second app refers to FastAPI obj 
     # host - makes the server accessible through localhost 
     # port - runs the app on this port 
@@ -334,7 +344,7 @@ if __name__ == "__main__": # ensures the server starts only when this file is di
 
 # can run app by: 
 # python -m app.main -or-
-# uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload 
+# uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload 
 # the second command enables automatic reloading during dev
 
 # FINAL SUMMARY:
