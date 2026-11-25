@@ -118,25 +118,26 @@ def setup_test_database(request):
 @pytest.fixture
 def db_session() -> Generator[Session, None, None]:
     """
-    Provide a test-scoped database session. Commits after a successful test;
-    rolls back if an exception occurs.
+    Provide an isolated database session for each test.
+    Roll back changes after the test finishes.
     """
-    session = TestingSessionLocal()
+    connection = test_engine.connect()
+    transaction = connection.begin()
+
+    session = TestingSessionLocal(bind=connection)
+
     try:
         yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
+
     finally:
         session.close()
-
+        transaction.rollback()
+        connection.close()
 
 @pytest.fixture
 def client(db_session: Session):
     """
-    Provide a FastAPI test client connected to the test database.
-    Clean up the Redis connection after each test.
+    Provide a FastAPI TestClient connected to the test database.
     """
 
     def override_get_db():
@@ -147,23 +148,12 @@ def client(db_session: Session):
     app.dependency_overrides[get_db] = override_get_db
 
     try:
-        with TestClient(app) as test_client:
-            try:
-                yield test_client
-            finally:
-                # Close Redis while the TestClient event loop
-                # is still available.
-                from app.auth.redis import get_redis
-
-                redis_client = getattr(get_redis, "redis", None)
-
-                if redis_client is not None:
-                    test_client.portal.call(redis_client.aclose)
-                    delattr(get_redis, "redis")
+        with TestClient(app, raise_server_exceptions=True) as test_client:
+            yield test_client
 
     finally:
         app.dependency_overrides = original_overrides
-    
+
 # ======================================================================================
 # Test Data Fixtures
 # ======================================================================================
@@ -173,10 +163,39 @@ def fake_user_data() -> Dict[str, str]:
     return create_fake_user()
 
 @pytest.fixture
-def test_user(db_session: Session) -> User:
+def test_user(db_session: Session) -> Dict:
     """
-    Create and return a single test user in the database.
+    Create a test user and return both the user object
+    and its original plaintext password.
     """
+
+    user_data = create_fake_user()
+
+    plain_password = user_data["password"]
+
+    user = User(
+        first_name=user_data["first_name"],
+        last_name=user_data["last_name"],
+        email=user_data["email"],
+        username=user_data["username"],
+        password=get_password_hash(plain_password)
+    )
+
+    db_session.add(user)
+    db_session.flush()
+    db_session.refresh(user)
+
+    return {
+        "user": user,
+        "password": plain_password
+    }
+
+@pytest.fixture
+def second_test_user(db_session: Session) -> User:
+    """
+    Create a second test user for authorization tests.
+    """
+
     user_data = create_fake_user()
 
     user = User(
@@ -188,32 +207,9 @@ def test_user(db_session: Session) -> User:
     )
 
     db_session.add(user)
-    db_session.commit()
+    db_session.flush()
     db_session.refresh(user)
 
-    logger.info(f"Created test user ID: {user.id}")
-    return user
-
-@pytest.fixture
-def second_test_user(db_session: Session) -> User:
-    """
-    Create a second test user for authorization tests.
-    """
-    user_data = create_fake_user()
-
-    user = User(
-        first_name=user_data["first_name"],
-        last_name=user_data["last_name"],
-        email=user_data["email"],
-        username=user_data["username"],
-        hashed_password=get_password_hash(user_data["password"])
-    )
-
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-
-    logger.info(f"Created second test user ID: {user.id}")
     return user
 
 @pytest.fixture
@@ -248,14 +244,25 @@ def second_auth_headers(second_test_user: User) -> Dict[str, str]:
 @pytest.fixture
 def seed_users(db_session: Session, request) -> List[User]:
     """
-    Seed multiple test users in the database. By default, 5 users are created
-    unless a 'param' value is provided (e.g., via @pytest.mark.parametrize).
+    Seed multiple users with properly hashed passwords.
     """
+
     num_users = getattr(request, "param", 5)
-    users = [User(**create_fake_user()) for _ in range(num_users)]
+
+    users = []
+
+    for _ in range(num_users):
+        user_data = create_fake_user()
+
+        user_data["password"] = get_password_hash(
+            user_data["password"]
+        )
+
+        users.append(User(**user_data))
+
     db_session.add_all(users)
-    db_session.commit()
-    logger.info(f"Seeded {len(users)} users.")
+    db_session.flush()
+
     return users
 
 # ======================================================================================
