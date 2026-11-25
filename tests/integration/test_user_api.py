@@ -40,10 +40,14 @@ def test_register_duplicate_username(client, test_user):
             "last_name": "User",
             "email": "different@example.com",
             "username": test_user.username,
-            "password": "Password123",
-            "confirm_password": "Password123"
+            "password": "Password123!",
+            "confirm_password": "Password123!"
         }
     )
+
+    # DEBUGGING
+    print("\nSTATUS CODE:", response.status_code)
+    print("\nRESPONSE BODY:", response.text)
 
     assert response.status_code == 400
 
@@ -56,8 +60,8 @@ def test_register_duplicate_email(client, test_user):
             "last_name": "User",
             "email": test_user.email,
             "username": "different_username",
-            "password": "Password123",
-            "confirm_password": "Password123"
+            "password": "Password123!",
+            "confirm_password": "Password123!"
         }
     )
 
@@ -90,7 +94,9 @@ def test_register_short_password(client, fake_user_data):
         json=user_data
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 422 
+    # UserCreate schema validates the password before the registration endpoint executes
+    # Pydantic rejects it before register() even gets called - invalid registration data
 
 def test_login_success_username(client, test_user):
 
