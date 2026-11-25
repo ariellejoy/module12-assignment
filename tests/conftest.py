@@ -17,6 +17,13 @@ from app.models.user import User
 from app.core.config import settings
 from app.database_init import init_db, drop_db
 
+from fastapi.testclient import TestClient
+
+from app.main import app
+from app.database import get_db 
+from app.auth.jwt import create_token, get_password_hash
+from app.schemas.token import TokenType
+
 # ======================================================================================
 # Logging Configuration
 # ======================================================================================
@@ -124,6 +131,39 @@ def db_session() -> Generator[Session, None, None]:
     finally:
         session.close()
 
+
+@pytest.fixture
+def client(db_session: Session):
+    """
+    Provide a FastAPI test client connected to the test database.
+    Clean up the Redis connection after each test.
+    """
+
+    def override_get_db():
+        yield db_session
+
+    original_overrides = app.dependency_overrides.copy()
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        with TestClient(app) as test_client:
+            try:
+                yield test_client
+            finally:
+                # Close Redis while the TestClient event loop
+                # is still available.
+                from app.auth.redis import get_redis
+
+                redis_client = getattr(get_redis, "redis", None)
+
+                if redis_client is not None:
+                    test_client.portal.call(redis_client.aclose)
+                    delattr(get_redis, "redis")
+
+    finally:
+        app.dependency_overrides = original_overrides
+    
 # ======================================================================================
 # Test Data Fixtures
 # ======================================================================================
@@ -138,12 +178,72 @@ def test_user(db_session: Session) -> User:
     Create and return a single test user in the database.
     """
     user_data = create_fake_user()
-    user = User(**user_data)
+
+    user = User(
+        first_name=user_data["first_name"],
+        last_name=user_data["last_name"],
+        email=user_data["email"],
+        username=user_data["username"],
+        password=get_password_hash(user_data["password"])
+    )
+
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+
     logger.info(f"Created test user ID: {user.id}")
     return user
+
+@pytest.fixture
+def second_test_user(db_session: Session) -> User:
+    """
+    Create a second test user for authorization tests.
+    """
+    user_data = create_fake_user()
+
+    user = User(
+        first_name=user_data["first_name"],
+        last_name=user_data["last_name"],
+        email=user_data["email"],
+        username=user_data["username"],
+        hashed_password=get_password_hash(user_data["password"])
+    )
+
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+
+    logger.info(f"Created second test user ID: {user.id}")
+    return user
+
+@pytest.fixture
+def auth_headers(test_user: User) -> Dict[str, str]:
+    """
+    Generate JWT authentication headers for User A.
+    """
+    token = create_token(
+        user_id=test_user.id,
+        token_type=TokenType.ACCESS
+    )
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
+
+
+@pytest.fixture
+def second_auth_headers(second_test_user: User) -> Dict[str, str]:
+    """
+    Generate JWT authentication headers for User B.
+    """
+    token = create_token(
+        user_id=second_test_user.id,
+        token_type=TokenType.ACCESS
+    )
+
+    return {
+        "Authorization": f"Bearer {token}"
+    }
 
 @pytest.fixture
 def seed_users(db_session: Session, request) -> List[User]:
@@ -271,3 +371,4 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "slow" in item.keywords:
                 item.add_marker(skip_slow)
+
