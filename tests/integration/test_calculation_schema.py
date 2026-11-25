@@ -5,7 +5,7 @@ from datetime import datetime
 from app.schemas.calculation import (
     CalculationCreate,
     CalculationUpdate,
-    CalculationResponse
+    CalculationRead
 )
 
 def test_calculation_create_valid():
@@ -81,7 +81,7 @@ def test_calculation_update_no_fields():
     assert calc_update.inputs is None
 
 def test_calculation_response_valid():
-    """Test creating a valid CalculationResponse schema."""
+    """Test creating a valid CalculationRead schema."""
     data = {
         "id": uuid4(),
         "user_id": uuid4(),
@@ -91,7 +91,7 @@ def test_calculation_response_valid():
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
-    calc_response = CalculationResponse(**data)
+    calc_response = CalculationRead(**data)
     assert calc_response.id is not None
     assert calc_response.user_id is not None
     assert calc_response.type == "subtraction"
