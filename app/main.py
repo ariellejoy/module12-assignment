@@ -10,12 +10,12 @@ from contextlib import asynccontextmanager # helps manage processes that happen 
 from datetime import datetime, timezone, timedelta # works with dates/times, manages timezones, represents duration
 from uuid import UUID # unique identifiers
 from typing import List # allows for describing of a list of items in Python's type hints
-from fastapi import Body, FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status
 # FastAPI is the main tool used to create the API 
 # Depends allows FastAPI to automatically provide things a function needs
 # HTTPException allows the API to return an error to the person making a request
 # status provides reasonable names for response codes
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 # handles username/password login submitted through form
 from sqlalchemy.orm import Session # represents a connection/session used to interact with db
 
@@ -63,7 +63,7 @@ def read_health():
 # this endpoint allows users to register a new account 
 # POST request = submit info or create something new 
 @app.post(
-    "/auth/register", # address used to register
+    "/users/register", # address used to register
     response_model=UserResponse, # the API will format a response based on UserResponse scheme
     status_code=status.HTTP_201_CREATED, # status code that is returned if successful
     tags=["auth"] # groups under authentication in API docs
@@ -84,7 +84,7 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
         db.rollback() # reverses any uncommited db changes
         raise HTTPException( # sends an error response to the person using the API
             status_code=status.HTTP_400_BAD_REQUEST, # 400 means the request was invalid
-            detail=str(e). # converts the error into readable text
+            detail=str(e) # converts the error into readable text
         )
 
 # summary of the endpoint: 
@@ -100,7 +100,7 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
 # there are 2 login endpoints - both authenticate a user, but accept info in different formats
 
 # creates an endpoint for logging in using JSON
-@app.post("/auth/login", response_model=TokenResponse, tags=["auth"])
+@app.post("/users/login", response_model=TokenResponse, tags=["auth"])
 def login_json(user_login: UserLogin, db: Session = Depends(get_db)): # UserLogin defines what info is expected, Depends provides db session
     """Login with JSON payload"""
     auth_result = User.authenticate(db, user_login.username, user_login.password) # calls authenticate method inside User model
@@ -121,7 +121,7 @@ def login_json(user_login: UserLogin, db: Session = Depends(get_db)): # UserLogi
     if expires_at is None:
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
     elif expires_at.tzinfo is None:
-        xpires_at = expires_at.replace(tzinfo=timezone.utc)
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
 
     # returns successful login info
     return TokenResponse(
@@ -281,7 +281,7 @@ def update_calculation(
     if calculation_update.inputs is not None:
         calculation.inputs = calculation_update.inputs
         calculation.result = calculation.get_result()
-    calculation.updated_at = datetime.utcnow() # updates the timestamp
+    calculation.updated_at = datetime.now(timezone.utc) # updates the timestamp
     # saves/refreshes changes and returns the updated record
     db.commit()
     db.refresh(calculation)

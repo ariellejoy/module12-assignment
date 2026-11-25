@@ -158,6 +158,10 @@ class User(Base):
 
         if not user or not user.verify_password(password):
             return None
+        
+        # prevents inactive users from logging in
+        if not user.is_active: 
+            return None
 
         # Update the last_login timestamp
         user.last_login = utcnow()

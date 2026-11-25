@@ -24,7 +24,7 @@ pwd_context = CryptContext(
     bcrypt__rounds=settings.BCRYPT_ROUNDS
 )
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against its hash."""
@@ -157,9 +157,12 @@ async def get_current_user(
             
         return user
         
-    except Exception as e:
+    except HTTPException:
+        raise
+
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
+            detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
