@@ -1,264 +1,69 @@
-# 📦 Project Setup
+This code for the Module 12 - Assignment builds on the code used for the last module. Changes and additions have been made to meet the requirements for this current assignment.
 
----
+# How to run tests locally 
+Changes and additions were made to the testing suite to ensure ample amount of coverage for the added Calculation model and schema, as well as for updated packages and dependencies based on security scans in GitHub Actions. Existing test cases were also updated to account for changes made across the code for cleanup and standardization across the app.
 
-# 🧩 1. Install Homebrew (Mac Only)
+In order to run tests, a user will need to ensure that they are running the project in a virtual environment and all requirements + dependencies have been added. 
 
-> Skip this step if you're on Windows.
+To add a virtual environment, enter the following in the terminal: 
 
-Homebrew is a package manager for macOS.  
-You’ll use it to easily install Git, Python, Docker, etc.
-
-**Install Homebrew:**
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+FOR MAC (what I used)-
 ```
-
-**Verify Homebrew:**
-
-```bash
-brew --version
-```
-
-If you see a version number, you're good to go.
-
----
-
-# 🧩 2. Install and Configure Git
-
-## Install Git
-
-- **MacOS (using Homebrew)**
-
-```bash
-brew install git
-```
-
-- **Windows**
-
-Download and install [Git for Windows](https://git-scm.com/download/win).  
-Accept the default options during installation.
-
-**Verify Git:**
-
-```bash
-git --version
-```
-
----
-
-## Configure Git Globals
-
-Set your name and email so Git tracks your commits properly:
-
-```bash
-git config --global user.name "Your Name"
-git config --global user.email "your_email@example.com"
-```
-
-Confirm the settings:
-
-```bash
-git config --list
-```
-
----
-
-## Generate SSH Keys and Connect to GitHub
-
-> Only do this once per machine.
-
-1. Generate a new SSH key:
-
-```bash
-ssh-keygen -t ed25519 -C "your_email@example.com"
-```
-
-(Press Enter at all prompts.)
-
-2. Start the SSH agent:
-
-```bash
-eval "$(ssh-agent -s)"
-```
-
-3. Add the SSH private key to the agent:
-
-```bash
-ssh-add ~/.ssh/id_ed25519
-```
-
-4. Copy your SSH public key:
-
-- **Mac/Linux:**
-
-```bash
-cat ~/.ssh/id_ed25519.pub | pbcopy
-```
-
-- **Windows (Git Bash):**
-
-```bash
-cat ~/.ssh/id_ed25519.pub | clip
-```
-
-5. Add the key to your GitHub account:
-   - Go to [GitHub SSH Settings](https://github.com/settings/keys)
-   - Click **New SSH Key**, paste the key, save.
-
-6. Test the connection:
-
-```bash
-ssh -T git@github.com
-```
-
-You should see a success message.
-
----
-
-# 🧩 3. Clone the Repository
-
-Now you can safely clone the course project:
-
-```bash
-git clone <repository-url>
-cd <repository-directory>
-```
-
----
-
-# 🛠️ 4. Install Python 3.10+
-
-## Install Python
-
-- **MacOS (Homebrew)**
-
-```bash
-brew install python
-```
-
-- **Windows**
-
-Download and install [Python for Windows](https://www.python.org/downloads/).  
-✅ Make sure you **check the box** `Add Python to PATH` during setup.
-
-**Verify Python:**
-
-```bash
-python3 --version
-```
-or
-```bash
-python --version
-```
-
----
-
-## Create and Activate a Virtual Environment
-
-(Optional but recommended)
-
-```bash
 python3 -m venv venv
-source venv/bin/activate   # Mac/Linux
-venv\Scripts\activate.bat  # Windows
+```
+FOR WINDOWS-
+```
+python -m venv venv 
 ```
 
-### Install Required Packages
+*Interesting note: as I was running through the assignment, I generally would run into issues with getting my requirements file to install as expected. A workaround that I used was running python**3.12** instead of python3 when adding a virtual environment to start off with*
 
-```bash
+To run the virtual environment: 
+
+FOR MAC (what I used)- 
+```
+source venv/bin/activate
+```
+FOR WINDOWS-
+``` 
+venv\Scripts\activate.bat 
+```
+
+To install necessary dependencies, run the following in the terminal: 
+```
 pip install -r requirements.txt
 ```
-
----
-
-# 🐳 5. (Optional) Docker Setup
-
-> Skip if Docker isn't used in this module.
-
-## Install Docker
-
-- [Install Docker Desktop for Mac](https://www.docker.com/products/docker-desktop/)
-- [Install Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)
-
-## Build Docker Image
-
-```bash
-docker build -t <image-name> .
+*Note: I ran into a warning that pip will need to be upgraded. This was easy to resolve by running the following in the terminal:* 
+```
+pip install --upgrade pip 
 ```
 
-## Run Docker Container
-
-```bash
-docker run -it --rm <image-name>
+To run the unit tests, enter the following in the terminal: 
 ```
-
----
-
-# 🚀 6. Running the Project
-
-- **Without Docker**:
-
-```bash
-python main.py
+pytest
 ```
+This command will run your test files, which will return a complete output with successful tests, as well as any errors/failures that come up. Traceback calls are also helpful to determine how to fix these errors and failed tests. 
 
-(or update this if the main script is different.)
+A user can also check test coverage through the pytest output! A table will be displayed that shows the overall coverage and what lines do not have any tests covering them. You can better view the code by opening the **index.html** file from the htmlcov folder in the browser.
 
-- **With Docker**:
+# How to do manual checks in OpenAI
+Once the docker container is up and running, a user can navigate to the following URL to view their application: 
+` 
+http://localhost:8000
+` 
+8000 is the port that we are using for the application.
 
-```bash
-docker run -it --rm <image-name>
-```
+Update the URL to the following to view the Swagger UI and view the endpoints that live in the backend of the app: 
+`
+http://localhost:8000/docs
+` 
 
----
+A user would see a different UI with the documentation that has been set up in the main.py file. It should look something like the below screenshot: 
+![alt text](image.png)
+This can be used to: 
+1. Review the available endpoints, required parameters, request headers, + authentication requirements
+2. Executre API requests directly through the interface to determine that your APIs are accepting the expected information. Note: If the information/data does not meet requirements, the expected status code will get returned 
+3. Validate the responses using the status codes, response payloads, and error messages - these can be compared the the expected results that are displayed and/or knowledge of the codebase
 
-# 📝 7. Submission Instructions
-
-After finishing your work:
-
-```bash
-git add .
-git commit -m "Complete Module X"
-git push origin main
-```
-
-Then submit the GitHub repository link as instructed.
-
----
-
-# 🔥 Useful Commands Cheat Sheet
-
-| Action                         | Command                                          |
-| ------------------------------- | ------------------------------------------------ |
-| Install Homebrew (Mac)          | `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"` |
-| Install Git                     | `brew install git` or Git for Windows installer |
-| Configure Git Global Username  | `git config --global user.name "Your Name"`      |
-| Configure Git Global Email     | `git config --global user.email "you@example.com"` |
-| Clone Repository                | `git clone <repo-url>`                          |
-| Create Virtual Environment     | `python3 -m venv venv`                           |
-| Activate Virtual Environment   | `source venv/bin/activate` / `venv\Scripts\activate.bat` |
-| Install Python Packages        | `pip install -r requirements.txt`               |
-| Build Docker Image              | `docker build -t <image-name> .`                |
-| Run Docker Container            | `docker run -it --rm <image-name>`               |
-| Push Code to GitHub             | `git add . && git commit -m "message" && git push` |
-
----
-
-# 📋 Notes
-
-- Install **Homebrew** first on Mac.
-- Install and configure **Git** and **SSH** before cloning.
-- Use **Python 3.10+** and **virtual environments** for Python projects.
-- **Docker** is optional depending on the project.
-
----
-
-# 📎 Quick Links
-
-- [Homebrew](https://brew.sh/)
-- [Git Downloads](https://git-scm.com/downloads)
-- [Python Downloads](https://www.python.org/downloads/)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [GitHub SSH Setup Guide](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
+## Link to Docker Hub: 
+https://hub.docker.com/repository/docker/ariellejoy/module12-assignment/general
