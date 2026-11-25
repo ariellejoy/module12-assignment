@@ -48,7 +48,7 @@ def test_register_user_missing_password(db_session, fake_user_data):
 def test_register_duplicate_username(db_session, test_user, fake_user_data):
     """Test that duplicate usernames are rejected."""
 
-    existing_user = test_user["user"]
+    existing_user = test_user
 
     fake_user_data["username"] = existing_user.username
 
@@ -59,7 +59,7 @@ def test_register_duplicate_username(db_session, test_user, fake_user_data):
 def test_register_duplicate_email(db_session, test_user, fake_user_data):
     """Test that duplicate emails are rejected."""
 
-    existing_user = test_user["user"]
+    existing_user = test_user
 
     fake_user_data["email"] = existing_user.email
 
@@ -123,34 +123,45 @@ def test_verify_incorrect_password():
 def test_authenticate_with_username(db_session, test_user):
     """Test successful authentication using username."""
 
-    user = test_user["user"]
-    password = test_user["password"]
+    password = "TestPassword123"
 
-    result = User.authenticate(db_session, user.username, password)
+    test_user.password = User.hash_password(password)
+    db_session.flush()
+
+    result = User.authenticate(
+        db_session,
+        test_user.username,
+        password
+    )
 
     assert result is not None
-    assert result["user"].id == user.id
+    assert result["user"].id == test_user.id
     assert result["access_token"] is not None
     assert result["refresh_token"] is not None
     assert result["token_type"] == "bearer"
 
-
 def test_authenticate_with_email(db_session, test_user):
     """Test successful authentication using email."""
 
-    user = test_user["user"]
-    password = test_user["password"]
+    password = "TestPassword123"
 
-    result = User.authenticate(db_session, user.email, password)
+    test_user.password = User.hash_password(password)
+    db_session.flush()
+
+    result = User.authenticate(
+        db_session,
+        test_user.email,
+        password
+    )
 
     assert result is not None
-    assert result["user"].id == user.id
+    assert result["user"].id == test_user.id
 
 
 def test_authenticate_wrong_password(db_session, test_user):
     """Test that an incorrect password is rejected."""
 
-    user = test_user["user"]
+    user = test_user
 
     result = User.authenticate(
         db_session,
@@ -176,18 +187,20 @@ def test_authenticate_nonexistent_user(db_session):
 def test_authenticate_inactive_user(db_session, test_user):
     """Test that inactive users cannot authenticate."""
 
-    user = test_user["user"]
-    user.is_active = False
+    password = "TestPassword123"
+
+    test_user.password = User.hash_password(password)
+    test_user.is_active = False
+
     db_session.flush()
 
     result = User.authenticate(
         db_session,
-        user.username,
-        test_user["password"]
+        test_user.username,
+        password
     )
 
     assert result is None
-
 
 # ============================================================
 # Token Tests
@@ -196,7 +209,7 @@ def test_authenticate_inactive_user(db_session, test_user):
 def test_create_access_token(test_user):
     """Test access token generation."""
 
-    user = test_user["user"]
+    user = test_user
 
     token = User.create_access_token({"sub": str(user.id)})
 
@@ -207,7 +220,7 @@ def test_create_access_token(test_user):
 def test_create_refresh_token(test_user):
     """Test refresh token generation."""
 
-    user = test_user["user"]
+    user = test_user
 
     token = User.create_refresh_token({"sub": str(user.id)})
 
@@ -218,7 +231,7 @@ def test_create_refresh_token(test_user):
 def test_verify_valid_token(test_user):
     """Test verification of a valid access token."""
 
-    user = test_user["user"]
+    user = test_user
 
     token = User.create_access_token({"sub": str(user.id)})
 
