@@ -1,3 +1,4 @@
+
 # app/auth/redis.py
 
 import redis.asyncio as redis
@@ -8,8 +9,10 @@ settings = get_settings()
 
 
 async def get_redis():
+    """Get or create the Redis connection."""
+
     if not hasattr(get_redis, "redis"):
-        get_redis.redis = await aioredis.from_url(
+        get_redis.redis = await redis.from_url(
             settings.REDIS_URL or "redis://localhost",
             decode_responses=True
         )
@@ -20,12 +23,12 @@ async def get_redis():
 async def add_to_blacklist(jti: str, exp: int):
     """Add a token's JTI to the blacklist until expiration."""
 
-    redis = await get_redis()
+    redis_client = await get_redis()
 
     remaining_time = int(exp - time.time())
 
     if remaining_time > 0:
-        await redis.set(
+        await redis_client.set(
             f"blacklist:{jti}",
             "1",
             ex=remaining_time
@@ -35,6 +38,8 @@ async def add_to_blacklist(jti: str, exp: int):
 async def is_blacklisted(jti: str) -> bool:
     """Check if a token's JTI is blacklisted."""
 
-    redis = await get_redis()
+    redis_client = await get_redis()
 
-    return bool(await redis.exists(f"blacklist:{jti}"))
+    return bool(
+        await redis_client.exists(f"blacklist:{jti}")
+    )

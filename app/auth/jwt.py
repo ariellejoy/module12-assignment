@@ -107,6 +107,8 @@ async def decode_token(
                 detail="Invalid token type",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+        print("Decoded JWT payload:", payload)
         
         # checks that the token contains a JTI claim 
         jti = payload.get("jti")
@@ -117,6 +119,9 @@ async def decode_token(
                 detail="Invalid token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
+        print ("Checking blacklist for JTI:", jti)
+        print("Is blacklisted:", await is_blacklisted(jti))
                     
         if await is_blacklisted(jti):
             raise HTTPException(
